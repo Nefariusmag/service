@@ -1,0 +1,38 @@
+version: '3.5'
+services:
+
+  postgres:
+    env_file: .env
+    image: postgres:10
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./postgres/data/:/var/lib/postgresql/data/
+    ports:
+      - 5432:5432
+
+  bot:
+    env_file: .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexus.dkp.lanit.ru:888/bot-services:${VERSION_BOT_SERVICES}
+    restart: always
+
+  cadvisor:
+    image: google/cadvisor:v0.29.0
+    volumes:
+      - '/:/rootfs:ro'
+      - '/var/run:/var/run:rw'
+      - '/sys:/sys:ro'
+      - '/var/lib/docker/:/var/lib/docker:ro'
+      - '/cgroup:/cgroup:ro'
+    ports:
+      - '8080:8080'
+    privileged: true
+
+
+
+networks:
+  default: {}

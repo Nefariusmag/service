@@ -1,0 +1,6 @@
+project = ""
+project_dump = ""
+environment = "test"
+version_app = "0.0.0"
+postgres_password = ""
+elk_host = ""

@@ -1,0 +1,16 @@
+.idea/
+__pycache__/
+DKPBotLog.csv
+postgres/
+# временные файлы и переменные
+config.py
+*env
+*.tfvars
+*.tfstate
+*.tfstate.backup
+*.terraform/
+*.info
+# секретные ключи
+devops/docker.json
+infrastructure/docker.json
+secret.json

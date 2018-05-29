@@ -1,0 +1,8 @@
+route:
+  receiver: 'notifications'
+
+receivers:
+- name: 'notifications'
+  webhook_configs:
+  - send_resolved: True
+    url: http://prometheus_bot:9087/alert/DEVELOPER_ID

@@ -1,0 +1,11 @@
+groups:
+- name: alert.rules
+  rules:
+  - alert: PostgreSQLDown
+    expr: pg_up == 0
+    for: 1m
+    labels:
+      severity: page
+    annotations:
+      description: 'PostgreSQL has been down for more than 1 minute'
+      # summary: 'PostgreSQL down App isn't working'

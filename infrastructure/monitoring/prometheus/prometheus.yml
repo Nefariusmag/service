@@ -1,0 +1,30 @@
+---
+global:
+  scrape_interval: '5s'
+
+rule_files:
+  - alerts.yml
+
+alerting:
+  alertmanagers:
+  - scheme: http
+    static_configs:
+    - targets:
+      - "alertmanager:9093"
+
+scrape_configs:
+
+  - job_name: 'postgresql'
+    static_configs:
+      - targets:
+        - 'postgres-exporter:9187'
+
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets:
+        - 'HOST_PROD:8080'
+
+  - job_name: 'docker'
+    static_configs:
+      - targets:
+        - 'HOST_PROD:9323'

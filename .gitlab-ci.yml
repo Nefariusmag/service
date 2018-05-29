@@ -1,0 +1,131 @@
+stages:
+  - test
+  - prod
+
+before_test:
+  stage: test
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    # тащим из бекапа конфиги
+    - rm -rf devops
+    - mv /tmp/devops_test devops
+    # удаляем виртуалку
+    - cd devops
+    - terraform destroy -force
+  allow_failure: true
+
+test:
+  stage: test
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    # настройка переменных для работы приложения
+    - cp config.py.example config.py
+    - cp .env.example .env
+    - echo "VERSION_BOT_SERVICES=${CI_COMMIT_TAG}" >> .env
+    - echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD_TEST}" >> .env
+    - echo "VACANCY_TOKEN=${VACANCY_TOKEN_TEST}" >> .env
+    - echo "BIRTHDAY_TOKEN=${BIRTHDAY_TOKEN_TEST}" >> .env
+    - echo "DEVELOPER_ID=${DEVELOPER_ID_TEST}" >> .env
+    - echo "HR_ID=${HR_ID_TEST}" >> .env
+    - echo "HR_STAFFF=${HR_STAFFF}" >> .env
+    # настройка переменных для доступа в гуглтабличку (для работы приложения)
+    - cp secret.json.example secret.json
+    - sed -i "s|PRIVATE_KEY_ID_VARIABLE|${PRIVATE_KEY_ID_VARIABLE}|" secret.json
+    - sed -i "s|PRIVATE_KEY_VARIABLE|${PRIVATE_KEY_VARIABLE}|" secret.json
+    # настройка переменных для логирования приложения
+    - echo "elk_host=${ELK_HOST}"  >> devops/terraform.tfvars.example
+    # настройка переменных для создаваемой машины
+    - echo "environment=\"test\"" >> devops/terraform.tfvars.example
+    - echo "project = \"${DEVOPS_PROJECT_ID}\"" >> devops/terraform.tfvars.example
+    - echo "postgres_password = \"${POSTGRES_PASSWORD_TEST}\"" >> devops/terraform.tfvars.example
+    - echo "version_app = \"${CI_COMMIT_TAG}\"" >> devops/terraform.tfvars.example
+    - echo "project_dump = \"${PROJECT_DUMP}\"" >> devops/terraform.tfvars.example
+    - cp devops/terraform.tfvars.example devops/terraform.tfvars
+    # подготавливаем секретные переменный для доступа в GCP
+    - cp devops/docker.json.example devops/docker.json
+    - sed -i "s|DEVOPS_PROJECT_ID|${DEVOPS_PROJECT_ID}|" devops/docker.json
+    - sed -i "s|DEVOPS_PRIVATE_KEY_ID_VARIABLE|${DEVOPS_PRIVATE_KEY_ID_VARIABLE}|" devops/docker.json
+    - sed -i "s|DEVOPS_PRIVATE_KEY_VARIABLE|${DEVOPS_PRIVATE_KEY_VARIABLE}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_EMAIL|${DEVOPS_CLIENT_EMAIL}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_ID|${DEVOPS_CLIENT_ID}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_CERT_URL|${DEVOPS_CLIENT_CERT_URL}|" devops/docker.json
+    # собираем машинку
+    - cd devops
+    - terraform init
+    - terraform apply -auto-approve
+    # бекапим конфиги
+    - cp -r ../devops/ /tmp/devops_test
+  # cache:
+  #   key: build-cache
+  #   untracked: true
+  #   paths:
+  #     - devops/terraform.tfstate
+  #     - devops/terraform.tfvars
+  #     - devops/docker.json
+  environment:
+    name: test
+
+prod:
+  stage: prod
+  when: manual
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    # настройка переменных для работы приложения
+    - cp config.py.example config.py
+    - cp .env.example .env
+    - echo "VERSION_BOT_SERVICES=${CI_COMMIT_TAG}" >> .env
+    - echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" >> .env
+    - echo "VACANCY_TOKEN=${VACANCY_TOKEN}" >> .env
+    - echo "BIRTHDAY_TOKEN=${BIRTHDAY_TOKEN}" >> .env
+    - echo "DEVELOPER_ID=${DEVELOPER_ID}" >> .env
+    - echo "HR_ID=${HR_ID}" >> .env
+    - echo "HR_STAFFF=${HR_STAFFF}" >> .env
+    # настройка переменных для доступа в гуглтабличку (для работы приложения)
+    - cp secret.json.example secret.json
+    - sed -i "s|PRIVATE_KEY_ID_VARIABLE|${PRIVATE_KEY_ID_VARIABLE}|" secret.json
+    - sed -i "s|PRIVATE_KEY_VARIABLE|${PRIVATE_KEY_VARIABLE}|" secret.json
+    # настройка переменных для логирования приложения
+    - echo "elk_host=${ELK_HOST}"  >> devops/terraform.tfvars.example
+    # настройка переменных для создаваемой машины
+    - echo "environment=\"prod\"" >> devops/terraform.tfvars.example
+    - echo "project = \"${DEVOPS_PROJECT_ID}\"" >> devops/terraform.tfvars.example
+    - echo "postgres_password = \"${POSTGRES_PASSWORD}\"" >> devops/terraform.tfvars.example
+    - echo "version_app = \"${CI_COMMIT_TAG}\"" >> devops/terraform.tfvars.example
+    - echo "project_dump = \"${PROJECT_DUMP}\"" >> devops/terraform.tfvars.example
+    - cp devops/terraform.tfvars.example devops/terraform.tfvars
+    # подготавливаем секретные переменный для доступа в GCP
+    - cp devops/docker.json.example devops/docker.json
+    - sed -i "s|DEVOPS_PROJECT_ID|${DEVOPS_PROJECT_ID}|" devops/docker.json
+    - sed -i "s|DEVOPS_PRIVATE_KEY_ID_VARIABLE|${DEVOPS_PRIVATE_KEY_ID_VARIABLE}|" devops/docker.json
+    - sed -i "s|DEVOPS_PRIVATE_KEY_VARIABLE|${DEVOPS_PRIVATE_KEY_VARIABLE}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_EMAIL|${DEVOPS_CLIENT_EMAIL}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_ID|${DEVOPS_CLIENT_ID}|" devops/docker.json
+    - sed -i "s|DEVOPS_CLIENT_CERT_URL|${DEVOPS_CLIENT_CERT_URL}|" devops/docker.json
+    # собираем машинку
+    - cd devops
+    - terraform init
+    - terraform apply -auto-approve
+    # бекапим конфиги
+    - cp -r ../devops /tmp/devops_prod
+  environment:
+    name: prod
+    on_stop: stop_prod
+
+stop_prod:
+  stage: prod
+  when: manual
+  only:
+    - /^\d+\.\d+.\d+/
+  script:
+    # тащим из бекапа конфиги
+    - rm -rf devops
+    - mv /tmp/devops_prod devops
+    # удаляем виртуалку
+    - cd devops
+    - terraform destroy -force
+  environment:
+    name: prod
+    action: stop

@@ -1,0 +1,67 @@
+version: '3.5'
+services:
+  gitlab:
+    env_file: .env
+    image: 'gitlab/gitlab-ce:latest'
+    restart: always
+    hostname: ${GITLAB_URL}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '222:22'
+    volumes:
+      - /opt/gitlab/config:/etc/gitlab
+      - /opt/gitlab/logs:/var/log/gitlab
+      - /opt/gitlab/data:/var/opt/gitlab
+    networks:
+      - gitlab
+
+  gitlab-runner:
+    image: 'gitlab/gitlab-runner:latest'
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitlab
+
+  elasticsearch:
+    image: elasticsearch:5
+    restart: always
+    volumes:
+      - /opt/elasticsearch/data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - elk
+    environment:
+      ES_JAVA_OPTS: "-Xmx1g -Xms256m"
+
+  logstash:
+    build:
+      context: /opt/logstash/
+      dockerfile: Dockerfile
+    image: nefariusmag/logstash:1.0.0
+    restart: always
+    volumes:
+      - /opt/logstash/:/etc/logstash/conf.d
+    ports:
+      - 5044:5044
+    environment:
+      LS_JAVA_OPTS: "-Xmx1g -Xms256m"
+    depends_on: ['elasticsearch']
+    networks:
+      - elk
+
+  kibana:
+    image: kibana:5
+    restart: always
+    ports:
+      - 5601:5601
+    depends_on: ['elasticsearch']
+    networks:
+      - elk
+
+networks:
+  elk:
+  gitlab:
+  monitoring:
